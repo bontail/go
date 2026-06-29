@@ -6,7 +6,10 @@
 
 package hex
 
-import "simd/archsimd"
+import (
+	"simd/archsimd"
+	"unsafe"
+)
 
 const simdBlockSize = 16
 
@@ -20,6 +23,10 @@ var lowerLetterRangeEnd = archsimd.BroadcastUint8x16(0x66)   // 'f'
 // 0x61...0x66 - 0x57 = 0x0a...0x0f
 var lowerLetterDeltaForSub = archsimd.BroadcastUint8x16(0x57)
 var normalizeLetterValue = archsimd.BroadcastUint8x16(0x20)
+var decodePackMask = archsimd.LoadInt8x16([]int8{
+	0, 2, 4, 6, 8, 10, 12, 14,
+	-1, -1, -1, -1, -1, -1, -1, -1,
+})
 
 // encodeSIMD encodes complete SIMD blocks and returns the number of source
 // bytes consumed.
@@ -83,12 +90,9 @@ func decodeBlock(input archsimd.Uint8x16, dst []byte) (invalid bool) {
 		And(lowerLetterRangeEnd.GreaterEqual(input))
 	isValid := isDigit.Or(isUpper.Or(isLower))
 
-	var invalidArr [16]int8
-	isValid.ToInt8x16().StoreArray(&invalidArr)
-	for _, v := range invalidArr {
-		if v == 0 {
-			return true
-		}
+	validBits := isValid.ToInt8x16().ToBits().ReshapeToUint64s()
+	if validBits.GetElem(0) != ^uint64(0) || validBits.GetElem(1) != ^uint64(0) {
+		return true
 	}
 
 	lower := input.Or(normalizeLetterValue)           // 'A'...'F' -> 'a'...'f'.
@@ -100,10 +104,11 @@ func decodeBlock(input archsimd.Uint8x16, dst []byte) (invalid bool) {
 	nibble := digitNibble.BitsToInt8().And(digitMask).
 		Or(letterNibble.BitsToInt8().And(letterMask))
 
-	var nibArr [16]uint8
-	nibble.ToBits().StoreArray(&nibArr)
-	for i := 0; i < 8; i++ {
-		dst[i] = (nibArr[i*2] << 4) | nibArr[i*2+1]
-	}
+	words := nibble.ToBits().ReshapeToUint16s()
+	lowByteMask := archsimd.BroadcastUint16x8(0x00ff)
+	packed := words.And(lowByteMask).ShiftAllLeft(4).
+		Or(words.ShiftAllRight(8)).ReshapeToUint8s().BitsToInt8().
+		LookupOrZero(decodePackMask).ToBits().ReshapeToUint64s()
+	*(*uint64)(unsafe.Pointer(&dst[0])) = packed.GetElem(0)
 	return false
 }

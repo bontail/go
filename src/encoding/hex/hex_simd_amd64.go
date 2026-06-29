@@ -6,7 +6,10 @@
 
 package hex
 
-import "simd/archsimd"
+import (
+	"simd/archsimd"
+	"unsafe"
+)
 
 const (
 	simdBlockSize = 16
@@ -46,6 +49,16 @@ var (
 	lowByteMask256 = [avx2BlockSize / 2]uint16{
 		0x00ff, 0x00ff, 0x00ff, 0x00ff, 0x00ff, 0x00ff, 0x00ff, 0x00ff,
 		0x00ff, 0x00ff, 0x00ff, 0x00ff, 0x00ff, 0x00ff, 0x00ff, 0x00ff,
+	}
+	decodePackMask128 = [simdBlockSize]int8{
+		0, 2, 4, 6, 8, 10, 12, 14,
+		-1, -1, -1, -1, -1, -1, -1, -1,
+	}
+	decodePackMask256 = [avx2BlockSize]int8{
+		0, 2, 4, 6, 8, 10, 12, 14,
+		-1, -1, -1, -1, -1, -1, -1, -1,
+		0, 2, 4, 6, 8, 10, 12, 14,
+		-1, -1, -1, -1, -1, -1, -1, -1,
 	}
 	digitRangeStart128 = [simdBlockSize]int8{
 		0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
@@ -220,12 +233,8 @@ func decodeBlock(input archsimd.Uint8x16, dst []byte) (invalid bool) {
 		And(lowerLetterRangeEnd.GreaterEqual(c))
 	isValid := isDigit.Or(isUpper.Or(isLower))
 
-	var invalidArr [16]int8
-	isValid.ToInt8x16().StoreArray(&invalidArr)
-	for _, v := range invalidArr {
-		if v == 0 {
-			return true
-		}
+	if isValid.ToBits() != 0xffff {
+		return true
 	}
 
 	lower := input.Or(archsimd.LoadInt8x16Array(&normalizeLetterValue128).AsUint8x16())
@@ -237,11 +246,7 @@ func decodeBlock(input archsimd.Uint8x16, dst []byte) (invalid bool) {
 	nibble := digitNibble.BitsToInt8().And(digitMask).
 		Or(letterNibble.BitsToInt8().And(letterMask))
 
-	var nibArr [16]uint8
-	nibble.ToBits().StoreArray(&nibArr)
-	for i := 0; i < 8; i++ {
-		dst[i] = (nibArr[i*2] << 4) | nibArr[i*2+1]
-	}
+	decodeNibbles(nibble.ToBits(), dst)
 	return false
 }
 
@@ -258,12 +263,8 @@ func decodeBlockAVX2(input archsimd.Uint8x32, dst []byte) (invalid bool) {
 		And(archsimd.BroadcastInt8x32(0x66).GreaterEqual(c))
 	isValid := isDigit.Or(isUpper.Or(isLower))
 
-	var invalidArr [32]int8
-	isValid.ToInt8x32().StoreArray(&invalidArr)
-	for _, v := range invalidArr {
-		if v == 0 {
-			return true
-		}
+	if isValid.ToBits() != 0xffffffff {
+		return true
 	}
 
 	lower := input.Or(archsimd.BroadcastUint8x32(0x20))
@@ -275,16 +276,24 @@ func decodeBlockAVX2(input archsimd.Uint8x32, dst []byte) (invalid bool) {
 	nibble := digitNibble.BitsToInt8().And(digitMask).
 		Or(letterNibble.BitsToInt8().And(letterMask)).ToBits()
 
-	decodeNibbles(nibble.GetLo(), dst[:8])
-	decodeNibbles(nibble.GetHi(), dst[8:16])
+	words := nibble.AsUint16x16()
+	packed := words.And(archsimd.LoadUint16x16Array(&lowByteMask256)).ShiftAllLeft(4).
+		Or(words.ShiftAllRight(8)).AsUint8x32().
+		PermuteOrZeroGrouped(archsimd.LoadInt8x32Array(&decodePackMask256))
+	storeUint64(dst, packed.GetLo().AsUint64x2().GetElem(0))
+	storeUint64(dst[8:], packed.GetHi().AsUint64x2().GetElem(0))
 	return false
 }
 
 // decodeNibbles combines 16 nibble values into 8 decoded bytes.
 func decodeNibbles(nibble archsimd.Uint8x16, dst []byte) {
-	var nibArr [16]uint8
-	nibble.StoreArray(&nibArr)
-	for i := 0; i < 8; i++ {
-		dst[i] = (nibArr[i*2] << 4) | nibArr[i*2+1]
-	}
+	words := nibble.AsUint16x8()
+	packed := words.And(archsimd.LoadUint16x8Array(&lowByteMask128)).ShiftAllLeft(4).
+		Or(words.ShiftAllRight(8)).AsUint8x16().
+		PermuteOrZero(archsimd.LoadInt8x16Array(&decodePackMask128))
+	storeUint64(dst, packed.AsUint64x2().GetElem(0))
+}
+
+func storeUint64(dst []byte, value uint64) {
+	*(*uint64)(unsafe.Pointer(&dst[0])) = value
 }

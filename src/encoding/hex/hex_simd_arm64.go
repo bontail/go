@@ -75,11 +75,13 @@ func decodeBlock(input archsimd.Uint8x16, dst []byte) (invalid bool) {
 		And(lowerLetterRangeEnd.GreaterEqual(input))
 	isValid := isDigit.Or(isUpper.Or(isLower))
 
-	var invalidArr [16]int8
-	isValid.ToInt8x16().StoreArray(&invalidArr)
-	for _, v := range invalidArr {
-		if v == 0 {
-			return true
+	if isValid.ToInt8x16().ToBits().ReduceMin() == 0 {
+		var invalidArr [16]int8
+		isValid.ToInt8x16().StoreArray(&invalidArr)
+		for _, v := range invalidArr {
+			if v == 0 {
+				return true
+			}
 		}
 	}
 
@@ -92,10 +94,11 @@ func decodeBlock(input archsimd.Uint8x16, dst []byte) (invalid bool) {
 	nibble := digitNibble.BitsToInt8().And(digitMask).
 		Or(letterNibble.BitsToInt8().And(letterMask))
 
-	var nibArr [16]uint8
-	nibble.ToBits().StoreArray(&nibArr)
-	for i := 0; i < 8; i++ {
-		dst[i] = (nibArr[i*2] << 4) | nibArr[i*2+1]
-	}
+	evenNibbles := nibble.ConcatEven(nibble)
+	oddNibbles := nibble.ConcatOdd(nibble)
+	result := evenNibbles.ShiftAllLeft(4).Or(oddNibbles)
+	var arr [16]uint8
+	result.ToBits().StoreArray(&arr)
+	copy(dst[:8], arr[:8])
 	return false
 }
