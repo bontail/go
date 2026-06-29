@@ -7,8 +7,8 @@
 package hex
 
 import (
+	"internal/byteorder"
 	"simd/archsimd"
-	"unsafe"
 )
 
 const (
@@ -295,5 +295,5 @@ func decodeNibbles(nibble archsimd.Uint8x16, dst []byte) {
 }
 
 func storeUint64(dst []byte, value uint64) {
-	*(*uint64)(unsafe.Pointer(&dst[0])) = value
+	byteorder.LEPutUint64(dst, value)
 }
