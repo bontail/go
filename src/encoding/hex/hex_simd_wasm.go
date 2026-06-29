@@ -6,7 +6,10 @@
 
 package hex
 
-import "simd/archsimd"
+import (
+	"internal/byteorder"
+	"simd/archsimd"
+)
 
 const simdBlockSize = 16
 
@@ -106,6 +109,6 @@ func decodeBlock(input archsimd.Uint8x16, dst []byte) (invalid bool) {
 	packed := words.And(lowByteMask).ShiftAllLeft(4).
 		Or(words.ShiftAllRight(8)).ReshapeToUint8s().BitsToInt8().
 		LookupOrZero(decodePackMask).ToBits().ReshapeToUint64s()
-	storeUint64LE(dst, packed.GetElem(0))
+	byteorder.LEPutUint64(dst, packed.GetElem(0))
 	return false
 }

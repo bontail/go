@@ -6,7 +6,10 @@
 
 package hex
 
-import "simd/archsimd"
+import (
+	"internal/byteorder"
+	"simd/archsimd"
+)
 
 const (
 	simdBlockSize = 16
@@ -277,8 +280,8 @@ func decodeBlockAVX2(input archsimd.Uint8x32, dst []byte) (invalid bool) {
 	packed := words.And(archsimd.LoadUint16x16Array(&lowByteMask256)).ShiftAllLeft(4).
 		Or(words.ShiftAllRight(8)).AsUint8x32().
 		PermuteOrZeroGrouped(archsimd.LoadInt8x32Array(&decodePackMask256))
-	storeUint64LE(dst, packed.GetLo().AsUint64x2().GetElem(0))
-	storeUint64LE(dst[8:], packed.GetHi().AsUint64x2().GetElem(0))
+	byteorder.LEPutUint64(dst, packed.GetLo().AsUint64x2().GetElem(0))
+	byteorder.LEPutUint64(dst[8:], packed.GetHi().AsUint64x2().GetElem(0))
 	return false
 }
 
@@ -288,5 +291,5 @@ func decodeNibbles(nibble archsimd.Uint8x16, dst []byte) {
 	packed := words.And(archsimd.LoadUint16x8Array(&lowByteMask128)).ShiftAllLeft(4).
 		Or(words.ShiftAllRight(8)).AsUint8x16().
 		PermuteOrZero(archsimd.LoadInt8x16Array(&decodePackMask128))
-	storeUint64LE(dst, packed.AsUint64x2().GetElem(0))
+	byteorder.LEPutUint64(dst, packed.AsUint64x2().GetElem(0))
 }
