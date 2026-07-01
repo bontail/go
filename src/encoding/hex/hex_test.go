@@ -248,8 +248,9 @@ var expectedHexDump = []byte(`00000000  1e 1f 20 21 22 23 24 25  26 27 28 29 2a 
 var sink []byte
 
 func BenchmarkEncode(b *testing.B) {
-	for _, size := range []int{256, 1024, 4096, 16384} {
-		src := bytes.Repeat([]byte{2, 3, 5, 7, 9, 11, 13, 17}, size/8)
+	for _, size := range []int{8, 15, 16, 17, 31, 32, 33, 64, 256, 1024, 4096, 16384, 1 << 20} {
+		pattern := []byte{2, 3, 5, 7, 9, 11, 13, 17}
+		src := bytes.Repeat(pattern, (size+len(pattern)-1)/len(pattern))[:size]
 		sink = make([]byte, 2*size)
 
 		b.Run(fmt.Sprintf("%v", size), func(b *testing.B) {
@@ -262,8 +263,9 @@ func BenchmarkEncode(b *testing.B) {
 }
 
 func BenchmarkDecode(b *testing.B) {
-	for _, size := range []int{256, 1024, 4096, 16384} {
-		src := bytes.Repeat([]byte{'2', 'b', '7', '4', '4', 'f', 'a', 'a'}, size/8)
+	for _, size := range []int{8, 14, 16, 18, 30, 32, 34, 64, 256, 1024, 4096, 16384, 1 << 20} {
+		pattern := []byte("2B74fAa0")
+		src := bytes.Repeat(pattern, (size+len(pattern)-1)/len(pattern))[:size]
 		sink = make([]byte, size/2)
 
 		b.Run(fmt.Sprintf("%v", size), func(b *testing.B) {
