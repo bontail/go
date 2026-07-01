@@ -544,11 +544,11 @@ func simdGenericOps() []opData {
 		{name: "InterleaveHiGroupedUint32x16", argLength: 2},                            // ARCH:amd64
 		{name: "InterleaveHiGroupedUint64x4", argLength: 2},                             // ARCH:amd64
 		{name: "InterleaveHiGroupedUint64x8", argLength: 2},                             // ARCH:amd64
-		{name: "InterleaveHiInt8x16", argLength: 2},                                     // ARCH:arm64
+		{name: "InterleaveHiInt8x16", argLength: 2},                                     // ARCH:amd64,arm64
 		{name: "InterleaveHiInt16x8", argLength: 2},                                     // ARCH:amd64,arm64
 		{name: "InterleaveHiInt32x4", argLength: 2},                                     // ARCH:amd64,arm64
 		{name: "InterleaveHiInt64x2", argLength: 2},                                     // ARCH:amd64,arm64
-		{name: "InterleaveHiUint8x16", argLength: 2},                                    // ARCH:arm64
+		{name: "InterleaveHiUint8x16", argLength: 2},                                    // ARCH:amd64,arm64
 		{name: "InterleaveHiUint16x8", argLength: 2},                                    // ARCH:amd64,arm64
 		{name: "InterleaveHiUint32x4", argLength: 2},                                    // ARCH:amd64,arm64
 		{name: "InterleaveHiUint64x2", argLength: 2},                                    // ARCH:amd64,arm64
@@ -564,11 +564,11 @@ func simdGenericOps() []opData {
 		{name: "InterleaveLoGroupedUint32x16", argLength: 2},                            // ARCH:amd64
 		{name: "InterleaveLoGroupedUint64x4", argLength: 2},                             // ARCH:amd64
 		{name: "InterleaveLoGroupedUint64x8", argLength: 2},                             // ARCH:amd64
-		{name: "InterleaveLoInt8x16", argLength: 2},                                     // ARCH:arm64
+		{name: "InterleaveLoInt8x16", argLength: 2},                                     // ARCH:amd64,arm64
 		{name: "InterleaveLoInt16x8", argLength: 2},                                     // ARCH:amd64,arm64
 		{name: "InterleaveLoInt32x4", argLength: 2},                                     // ARCH:amd64,arm64
 		{name: "InterleaveLoInt64x2", argLength: 2},                                     // ARCH:amd64,arm64
-		{name: "InterleaveLoUint8x16", argLength: 2},                                    // ARCH:arm64
+		{name: "InterleaveLoUint8x16", argLength: 2},                                    // ARCH:amd64,arm64
 		{name: "InterleaveLoUint16x8", argLength: 2},                                    // ARCH:amd64,arm64
 		{name: "InterleaveLoUint32x4", argLength: 2},                                    // ARCH:amd64,arm64
 		{name: "InterleaveLoUint64x2", argLength: 2},                                    // ARCH:amd64,arm64

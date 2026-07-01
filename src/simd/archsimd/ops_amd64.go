@@ -3279,6 +3279,11 @@ func (x Uint64x8) GreaterEqual(y Uint64x8) Mask64x8
 
 // InterleaveHi interleaves the elements of the high halves of x and y.
 //
+// Asm: VPUNPCKHBW, CPU Feature: AVX
+func (x Int8x16) InterleaveHi(y Int8x16) Int8x16
+
+// InterleaveHi interleaves the elements of the high halves of x and y.
+//
 // Asm: VPUNPCKHWD, CPU Feature: AVX
 func (x Int16x8) InterleaveHi(y Int16x8) Int16x8
 
@@ -3291,6 +3296,11 @@ func (x Int32x4) InterleaveHi(y Int32x4) Int32x4
 //
 // Asm: VPUNPCKHQDQ, CPU Feature: AVX
 func (x Int64x2) InterleaveHi(y Int64x2) Int64x2
+
+// InterleaveHi interleaves the elements of the high halves of x and y.
+//
+// Asm: VPUNPCKHBW, CPU Feature: AVX
+func (x Uint8x16) InterleaveHi(y Uint8x16) Uint8x16
 
 // InterleaveHi interleaves the elements of the high halves of x and y.
 //
@@ -3373,6 +3383,11 @@ func (x Uint64x8) InterleaveHiGrouped(y Uint64x8) Uint64x8
 
 // InterleaveLo interleaves the elements of the low halves of x and y.
 //
+// Asm: VPUNPCKLBW, CPU Feature: AVX
+func (x Int8x16) InterleaveLo(y Int8x16) Int8x16
+
+// InterleaveLo interleaves the elements of the low halves of x and y.
+//
 // Asm: VPUNPCKLWD, CPU Feature: AVX
 func (x Int16x8) InterleaveLo(y Int16x8) Int16x8
 
@@ -3385,6 +3400,11 @@ func (x Int32x4) InterleaveLo(y Int32x4) Int32x4
 //
 // Asm: VPUNPCKLQDQ, CPU Feature: AVX
 func (x Int64x2) InterleaveLo(y Int64x2) Int64x2
+
+// InterleaveLo interleaves the elements of the low halves of x and y.
+//
+// Asm: VPUNPCKLBW, CPU Feature: AVX
+func (x Uint8x16) InterleaveLo(y Uint8x16) Uint8x16
 
 // InterleaveLo interleaves the elements of the low halves of x and y.
 //
