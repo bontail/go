@@ -1,0 +1,104 @@
+name: encoding/hex SIMD benchmarks
+
+on:
+  push:
+    branches:
+      - encoding-hex-simd
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: amd64
+            runner: ubuntu-24.04
+            goos: linux
+            goarch: amd64
+          - target: arm64
+            runner: ubuntu-24.04-arm
+            goos: linux
+            goarch: arm64
+          - target: wasm
+            runner: ubuntu-24.04
+            goos: js
+            goarch: wasm
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.25.x
+          cache: false
+
+      - name: Build Go toolchain
+        shell: bash
+        run: |
+          set -euxo pipefail
+          export GOROOT_BOOTSTRAP="$(go env GOROOT)"
+          cd src
+          ./make.bash --no-banner
+
+      - name: Record environment
+        shell: bash
+        run: |
+          mkdir -p benchmark-results
+          {
+            uname -a
+            lscpu
+            node --version
+            ./bin/go version
+            ./bin/go env GOHOSTOS GOHOSTARCH
+          } > "benchmark-results/${{ matrix.target }}-environment.txt"
+
+      - name: Run benchmarks
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p benchmark-results
+          for experiment in simd nosimd; do
+            output="benchmark-results/${{ matrix.target }}-${experiment}.txt"
+            if [[ "${{ matrix.target }}" == wasm ]]; then
+              env \
+                GO111MODULE=off \
+                GOEXPERIMENT="$experiment" \
+                GOOS="${{ matrix.goos }}" \
+                GOARCH="${{ matrix.goarch }}" \
+                ./bin/go test \
+                  -run='^$' \
+                  -bench='^(BenchmarkEncode|BenchmarkDecode)$' \
+                  -benchtime=5s \
+                  -count=3 \
+                  -cpu=1 \
+                  -exec="$PWD/lib/wasm/go_js_wasm_exec" \
+                  ./src/encoding/hex | tee "$output"
+            else
+              env \
+                GO111MODULE=off \
+                GOEXPERIMENT="$experiment" \
+                GOOS="${{ matrix.goos }}" \
+                GOARCH="${{ matrix.goarch }}" \
+                ./bin/go test \
+                  -run='^$' \
+                  -bench='^(BenchmarkEncode|BenchmarkDecode)$' \
+                  -benchtime=5s \
+                  -count=3 \
+                  -cpu=1 \
+                  ./src/encoding/hex | tee "$output"
+            fi
+          done
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hex-simd-${{ matrix.target }}
+          path: benchmark-results/
